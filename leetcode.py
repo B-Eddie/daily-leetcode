@@ -1,7 +1,9 @@
 import requests
 import json
+import random
 
 LEETCODE_GRAPHQL_URL = "https://leetcode.com/graphql"
+LEETCODE_API_URL = "https://leetcode.com/api/problems/all/"
 
 def get_daily_problem(difficulty: str = "random"):
     """Get a daily problem, optionally filtered by difficulty"""
@@ -19,15 +21,23 @@ def get_daily_problem(difficulty: str = "random"):
           }
         }
         """
-        response = requests.post(LEETCODE_GRAPHQL_URL, json={'query': query})
-        if response.status_code == 200:
-            data = response.json()
-            question = data['data']['activeDailyCodingChallengeQuestion']['question']
-            return {
-                'id': question['questionId'],
-                'title': question['title'],
-                'slug': question['titleSlug']
-            }
+        try:
+            response = requests.post(LEETCODE_GRAPHQL_URL, json={'query': query}, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data and data['data']['activeDailyCodingChallengeQuestion']:
+                    question = data['data']['activeDailyCodingChallengeQuestion']['question']
+                    return {
+                        'id': question['questionId'],
+                        'title': question['title'],
+                        'slug': question['titleSlug']
+                    }
+                else:
+                    print(f"No daily challenge data in response: {data}")
+            else:
+                print(f"Error fetching daily challenge: {response.status_code} - {response.text}")
+        except Exception as e:
+            print(f"Exception fetching daily challenge: {e}")
     else:
         # Get a random problem of specified difficulty
         return get_random_problem_by_difficulty(difficulty)
@@ -35,50 +45,46 @@ def get_daily_problem(difficulty: str = "random"):
     return None
 
 def get_random_problem_by_difficulty(difficulty: str):
-    """Get a random problem of specified difficulty"""
+    """Get a random problem of specified difficulty using the /api/problems/all/ endpoint"""
     difficulty_map = {
-        "easy": "EASY",
-        "medium": "MEDIUM", 
-        "hard": "HARD"
+        "easy": 1,
+        "medium": 2, 
+        "hard": 3
     }
     
     if difficulty not in difficulty_map:
+        print(f"Invalid difficulty: {difficulty}")
         return None
         
-    # Query for problems with the specified difficulty
-    query = f"""
-    query {{
-      problemsetQuestionList(
-        categorySlug: ""
-        limit: 100
-        skip: 0
-        filters: {{
-          difficulty: {difficulty_map[difficulty]}
-        }}
-      ) {{
-        questions {{
-          title
-          titleSlug
-          questionId
-          difficulty
-        }}
-      }}
-    }}
-    """
-    
-    response = requests.post(LEETCODE_GRAPHQL_URL, json={'query': query})
-    if response.status_code == 200:
-        data = response.json()
-        questions = data['data']['problemsetQuestionList']['questions']
-        if questions:
-            # Pick a random question
-            import random
-            question = random.choice(questions)
-            return {
-                'id': question['questionId'],
-                'title': question['title'],
-                'slug': question['titleSlug']
-            }
+    try:
+        response = requests.get(LEETCODE_API_URL, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            if 'stat_status_pairs' in data:
+                # Filter problems by difficulty
+                target_level = difficulty_map[difficulty]
+                filtered_problems = [
+                    p for p in data['stat_status_pairs'] 
+                    if p['difficulty']['level'] == target_level and not p['paid_only']
+                ]
+                
+                if filtered_problems:
+                    # Pick a random question
+                    problem = random.choice(filtered_problems)
+                    stat = problem['stat']
+                    return {
+                        'id': str(stat['question_id']),
+                        'title': stat['question__title'],
+                        'slug': stat['question__title_slug']
+                    }
+                else:
+                    print(f"No {difficulty} problems found")
+            else:
+                print(f"Unexpected API response structure: {list(data.keys())}")
+        else:
+            print(f"Error fetching {difficulty} problems: {response.status_code} - {response.text}")
+    except Exception as e:
+        print(f"Exception fetching {difficulty} problems: {e}")
     
     return None
 
@@ -109,11 +115,18 @@ def get_user_stats(username):
       }}
     }}
     """
-    response = requests.post(LEETCODE_GRAPHQL_URL, json={'query': query})
-    if response.status_code == 200:
-        data = response.json()
-        if 'data' in data and data['data']['matchedUser']:
-            return data['data']['matchedUser']['submitStats']['acSubmissionNum']
+    try:
+        response = requests.post(LEETCODE_GRAPHQL_URL, json={'query': query}, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            if 'data' in data and data['data']['matchedUser']:
+                return data['data']['matchedUser']['submitStats']['acSubmissionNum']
+            else:
+                print(f"No user data found for username: {username}")
+        else:
+            print(f"Error fetching user stats: {response.status_code} - {response.text}")
+    except Exception as e:
+        print(f"Exception fetching user stats: {e}")
     return None
 
 def get_user_solved_count(username):
