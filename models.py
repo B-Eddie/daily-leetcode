@@ -69,6 +69,12 @@ class DataManager:
         """Get all configs"""
         return list(self.data['configs'].values())
 
+    def get_top_users_by_streak(self, limit: int = 10) -> List[Dict]:
+        """Get top users by streak"""
+        users = list(self.data['users'].values())
+        users.sort(key=lambda x: x.get('streak', 0), reverse=True)
+        return users[:limit]
+
     def get_today_solvers(self) -> List[Dict]:
         """Get users who have solved today's problem"""
         today = datetime.datetime.now(datetime.UTC).date().isoformat()
