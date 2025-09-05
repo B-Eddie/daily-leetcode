@@ -48,7 +48,11 @@ async def on_ready():
     jobs = scheduler.get_jobs()
     print(f'Total scheduled jobs: {len(jobs)}')
     for job in jobs:
-        print(f'Job: {job.id} - Next run: {job.next_run_time}')
+        try:
+            next_run = job.next_run_time if hasattr(job, 'next_run_time') else 'Unknown'
+            print(f'Job: {job.id} - Next run: {next_run}')
+        except AttributeError:
+            print(f'Job: {job.id} - Next run: Unable to determine')
     
     scheduler.start()
     print('Daily problem scheduler started')
