@@ -108,6 +108,18 @@ class DataManager:
                     })
         return active_users
 
+    def get_yesterday_solvers(self) -> List[str]:
+        """Get Discord user IDs of users who solved yesterday's problem"""
+        yesterday = (datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=1)).date().isoformat()
+        yesterday_solvers = []
+        for user_id, user_data in self.data['users'].items():
+            last_solve = user_data.get('last_solve_date')
+            if last_solve:
+                solve_date = datetime.datetime.fromisoformat(last_solve).date().isoformat()
+                if solve_date == yesterday:
+                    yesterday_solvers.append(user_id)
+        return yesterday_solvers
+
 # Global data manager instance
 data_manager = DataManager()
 

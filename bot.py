@@ -73,6 +73,16 @@ async def post_daily_problem_for_guild(guild_id: str, channel_id: str):
             daily_prob = create_daily_problem(problem['id'], problem['title'])
             data_manager.save_daily_problem(today, daily_prob)
             
+            # Get users who solved yesterday's problem for pinging
+            yesterday_solvers = data_manager.get_yesterday_solvers()
+            ping_message = ""
+            if yesterday_solvers:
+                # Convert Discord IDs to mention format and limit to first 10 to avoid spam
+                mentions = [f"<@{user_id}>" for user_id in yesterday_solvers[:10]]
+                if len(yesterday_solvers) > 10:
+                    mentions.append("and others")
+                ping_message = f"🎉 Great job yesterday: {' '.join(mentions)}! Keep up the momentum!\n\n"
+            
             # Post to the specific guild's channel
             channel = bot.get_channel(int(channel_id))
             if channel:
@@ -87,7 +97,7 @@ async def post_daily_problem_for_guild(guild_id: str, channel_id: str):
                     title=f"Daily LeetCode Challenge {difficulty_emoji}",
                     description=f"**{problem['title']}**\nSolve it here: https://leetcode.com/problems/{problem['slug']}/"
                 )
-                await channel.send(embed=embed)
+                await channel.send(content=ping_message, embed=embed)
                 print(f'Posted {difficulty} problem to guild {guild_id}')
         else:
             print(f'Problem already posted today for guild {guild_id}')
