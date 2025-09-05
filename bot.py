@@ -137,10 +137,26 @@ async def setup_channel(interaction: discord.Interaction, channel: discord.TextC
         config = create_config(str(interaction.guild.id), str(channel.id), hour, minute, difficulty)
         data_manager.save_config(str(interaction.guild.id), config)
     
+    # Update the scheduler with new time
+    job_id = f'daily_{interaction.guild.id}'
+    
+    # Remove existing job if it exists
+    if scheduler.get_job(job_id):
+        scheduler.remove_job(job_id)
+    
+    # Add new job with updated time
+    trigger = CronTrigger(hour=hour, minute=minute, timezone='US/Eastern')
+    scheduler.add_job(
+        post_daily_problem_for_guild,
+        trigger,
+        args=[str(interaction.guild.id), str(channel.id)],
+        id=job_id
+    )
+    
     difficulty_display = difficulty.title() if difficulty != "random" else "Random (LeetCode's daily)"
     await interaction.response.send_message(
         f"Daily LeetCode channel set to {channel.mention}\n"
-        f"Daily posts scheduled for {hour:02d}:{minute:02d}\n"
+        f"Daily posts scheduled for {hour:02d}:{minute:02d} EST/EDT\n"
         f"Problem difficulty: {difficulty_display}",
         ephemeral=True
     )
