@@ -120,6 +120,10 @@ class DataManager:
                     yesterday_solvers.append(user_id)
         return yesterday_solvers
 
+    def get_all_users(self) -> Dict[str, Dict]:
+        """Get all users"""
+        return self.data['users']
+
 # Global data manager instance
 data_manager = DataManager()
 

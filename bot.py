@@ -44,6 +44,16 @@ async def on_ready():
         )
         print(f'Scheduled daily posts for guild {config["guild_id"]} at {config["post_hour"]:02d}:{config["post_minute"]:02d} EST/EDT')
     
+    # Schedule automatic user progress checking every 4 hours during EST business hours
+    # Runs at 6 AM, 10 AM, 2 PM, 6 PM, 10 PM EST
+    progress_trigger = CronTrigger(hour=[6, 10, 14, 18, 22], minute=0, timezone='US/Eastern')
+    scheduler.add_job(
+        check_and_update_user_progress,
+        progress_trigger,
+        id='user_progress_check'
+    )
+    print('Scheduled automatic user progress checking every 4 hours')
+    
     # Print current jobs for debugging
     jobs = scheduler.get_jobs()
     print(f'Total scheduled jobs: {len(jobs)}')
@@ -236,7 +246,7 @@ async def status(interaction: discord.Interaction):
         embed.add_field(name="Problem", value=problem['title'], inline=False)
         embed.add_field(name="Your Streak", value=str(user['streak']), inline=True)
         embed.add_field(name="Status", value="Not solved yet", inline=True)
-        embed.set_footer(text="Use /mark_solved if you've solved it but it's not detected automatically")
+        embed.set_footer(text="Solves are automatically checked every 4 hours. Use /mark_solved if needed.")
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 @bot.tree.command(name="mark_solved", description="Manually mark today's problem as solved")
@@ -451,5 +461,56 @@ async def test_post(interaction: discord.Interaction):
         await interaction.response.send_message(f"Test post sent to {channel.mention}!", ephemeral=True)
     else:
         await interaction.response.send_message("Could not find the configured channel.", ephemeral=True)
+
+def check_and_update_user_progress():
+    """Check all users' LeetCode progress and update if they've solved new problems"""
+    print("Checking user progress...")
+    users = data_manager.get_all_users()
+    updated_count = 0
+    
+    for user_id, user_data in users.items():
+        if 'leetcode_username' in user_data:
+            username = user_data['leetcode_username']
+            current_solved = get_user_solved_count(username)
+            previous_solved = user_data.get('solved_count', 0)
+            
+            if current_solved > previous_solved:
+                # User has solved new problems
+                print(f"User {username} solved {current_solved - previous_solved} new problem(s)")
+                
+                # Update user data
+                user_data['solved_count'] = current_solved
+                user_data['last_solve_date'] = datetime.datetime.now(datetime.UTC).isoformat()
+                
+                # Update streak
+                today = datetime.datetime.now(datetime.UTC).date()
+                last_solve_date = user_data.get('last_solve_date')
+                
+                if last_solve_date:
+                    last_solve = datetime.datetime.fromisoformat(last_solve_date).date()
+                    if last_solve == today - datetime.timedelta(days=1):
+                        # Solved yesterday, streak continues
+                        user_data['streak'] = user_data.get('streak', 0) + 1
+                    elif last_solve == today:
+                        # Already solved today, don't increment streak
+                        pass
+                    else:
+                        # Streak broken, reset to 1
+                        user_data['streak'] = 1
+                else:
+                    # First solve
+                    user_data['streak'] = 1
+                
+                data_manager.save_user(user_id, user_data)
+                updated_count += 1
+    
+    if updated_count > 0:
+        print(f"Updated progress for {updated_count} user(s)")
+    else:
+        print("No user progress updates found")
+
+# Schedule the user progress check every hour
+scheduler.add_job(check_and_update_user_progress, 'interval', hours=1)
+print("Scheduled user progress checks every hour")
 
 bot.run(TOKEN)

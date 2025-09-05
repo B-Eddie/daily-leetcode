@@ -7,13 +7,9 @@ A Discord bot that posts daily LeetCode challenges and tracks user progress.
 - Posts a daily LeetCode problem at a configurable time each day.
 - Choose problem difficulty: Random (LeetCode's daily), Easy, Medium, or Hard.
 - Users can link their LeetCode username.
-- Automatic solve detection with manual override option.
-- **Community Features**: See who solved today's problem and track streaks.
-- **Solve Announcements**: Automatic announcements when someone solves a problem.
-- **Enhanced Leaderboards**: Top streaks and active solver tracking.
-- Tracks solve streaks based on increase in solved problems count.
-- Leaderboard for top streaks.
-- Status command to check if you've solved today's problem.
+- **Automatic Solve Detection**: Bot checks user progress every 4 hours and updates streaks automatically
+- **Manual Override**: Use `/mark_solved` if automatic detection misses your solve
+- **Status Check**: Use `/status` to see your current solve status (also triggers automatic check)
 - Per-server configuration for channel, posting time, and difficulty.
 - Simple JSON-based data storage (no database required).
 
@@ -47,8 +43,8 @@ The bot uses a simple JSON file (`bot_data.json`) for data storage instead of a 
 
 - `/setup_channel <channel> [hour] [minute] [difficulty]`: Set the channel, time, and difficulty for daily posts (admin only). Time defaults to 9:00 AM, difficulty defaults to random.
 - `/setup_username <username>`: Link your LeetCode username.
-- `/status`: Check if you've solved today's problem.
-- `/mark_solved`: Manually mark today's problem as solved (if automatic detection fails).
+- `/status`: Check your solve status (automatically detects new solves).
+- `/mark_solved`: Manually mark today's problem as solved (fallback for automatic detection).
 - `/today_solvers`: Show who has solved today's problem and their streaks.
 - `/leaderboard`: View the top streaks and active solvers.
 - `/view_config`: View the current daily post configuration.
@@ -69,6 +65,14 @@ The bot uses a simple JSON file (`bot_data.json`) for data storage instead of a 
 2. **User Setup**: Each user links their LeetCode account with `/setup_username username`
 3. **Daily Posts**: The bot will automatically post problems at the configured time each day
 4. **Manual Posts**: Admins can use `/post_now` to immediately post a problem for testing or special occasions
+
+## Automatic Progress Tracking
+
+The bot automatically checks user progress every 4 hours during EST business hours:
+- **Check Times**: 6 AM, 10 AM, 2 PM, 6 PM, 10 PM EST/EDT
+- **What it does**: Updates solve counts, streaks, and last solve dates
+- **Fallback**: Use `/mark_solved` if automatic detection misses your solve
+- **Manual Check**: Use `/status` to trigger an immediate progress check
 
 ## Time Configuration
 
