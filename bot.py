@@ -34,13 +34,21 @@ async def on_ready():
     configs = data_manager.get_all_configs()
     
     for config in configs:
+        # Use Eastern Time (EST/EDT) for scheduling
+        trigger = CronTrigger(hour=config['post_hour'], minute=config['post_minute'], timezone='US/Eastern')
         scheduler.add_job(
             post_daily_problem_for_guild,
-            CronTrigger(hour=config['post_hour'], minute=config['post_minute']),
+            trigger,
             args=[config['guild_id'], config['channel_id']],
             id=f'daily_{config["guild_id"]}'
         )
-        print(f'Scheduled daily posts for guild {config["guild_id"]} at {config["post_hour"]:02d}:{config["post_minute"]:02d}')
+        print(f'Scheduled daily posts for guild {config["guild_id"]} at {config["post_hour"]:02d}:{config["post_minute"]:02d} EST/EDT')
+    
+    # Print current jobs for debugging
+    jobs = scheduler.get_jobs()
+    print(f'Total scheduled jobs: {len(jobs)}')
+    for job in jobs:
+        print(f'Job: {job.id} - Next run: {job.next_run_time}')
     
     scheduler.start()
     print('Daily problem scheduler started')
@@ -263,7 +271,7 @@ async def view_config(interaction: discord.Interaction):
     
     embed = discord.Embed(title="Daily LeetCode Configuration", color=0x00ff00)
     embed.add_field(name="Channel", value=channel_mention, inline=True)
-    embed.add_field(name="Time", value=f"{config['post_hour']:02d}:{config['post_minute']:02d}", inline=True)
+    embed.add_field(name="Time", value=f"{config['post_hour']:02d}:{config['post_minute']:02d} EST/EDT", inline=True)
     embed.add_field(name="Difficulty", value=difficulty_display, inline=True)
     embed.add_field(name="Next Post", value="Today at the scheduled time (if not already posted)", inline=False)
     
@@ -375,5 +383,43 @@ async def leaderboard(interaction: discord.Interaction):
         embed.add_field(name="No Data", value="No users have solved problems yet!", inline=False)
     
     await interaction.response.send_message(embed=embed)
+
+@bot.tree.command(name="test_post", description="Test the daily posting (admin only)")
+async def test_post(interaction: discord.Interaction):
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("You need administrator permissions to test posting.", ephemeral=True)
+        return
+    
+    config = data_manager.get_config(str(interaction.guild.id))
+    if not config:
+        await interaction.response.send_message("No configuration found. Use `/setup_channel` first.", ephemeral=True)
+        return
+    
+    # Get the daily problem with configured difficulty
+    difficulty = config.get('difficulty', 'random')
+    problem = get_daily_problem(difficulty)
+    if not problem:
+        await interaction.response.send_message("Failed to fetch daily problem. Try again later.", ephemeral=True)
+        return
+    
+    # Post to the configured channel
+    channel = bot.get_channel(int(config['channel_id']))
+    if channel:
+        difficulty_emoji = {
+            "easy": "🟢",
+            "medium": "🟡", 
+            "hard": "🔴",
+            "random": "🎲"
+        }.get(difficulty, "🎲")
+        
+        embed = discord.Embed(
+            title=f"Daily LeetCode Challenge {difficulty_emoji} (TEST)",
+            description=f"**{problem['title']}**\nSolve it here: https://leetcode.com/problems/{problem['slug']}/",
+            color=0xffa500
+        )
+        await channel.send(embed=embed)
+        await interaction.response.send_message(f"Test post sent to {channel.mention}!", ephemeral=True)
+    else:
+        await interaction.response.send_message("Could not find the configured channel.", ephemeral=True)
 
 bot.run(TOKEN)

@@ -53,6 +53,7 @@ The bot uses a simple JSON file (`bot_data.json`) for data storage instead of a 
 - `/leaderboard`: View the top streaks and active solvers.
 - `/view_config`: View the current daily post configuration.
 - `/post_now`: Post the daily LeetCode problem immediately (admin only).
+- `/test_post`: Test the daily posting without saving (admin only).
 - `/sync_commands`: Manually sync slash commands (admin only, use if commands don't appear).
 
 ## Difficulty Options
@@ -73,17 +74,18 @@ The bot uses a simple JSON file (`bot_data.json`) for data storage instead of a 
 
 - **Hour**: 0-23 (24-hour format)
 - **Minute**: 0-59
+- **Timezone**: All times are in EST/EDT (Eastern Time - automatically adjusts for Daylight Saving Time)
 - **Examples**:
-  - `/setup_channel #leetcode 9 0` - 9:00 AM (default)
-  - `/setup_channel #leetcode 14 30` - 2:30 PM
-  - `/setup_channel #leetcode 18 0` - 6:00 PM
+  - `/setup_channel #leetcode 9 0` - 9:00 AM EST/EDT (default)
+  - `/setup_channel #leetcode 14 30` - 2:30 PM EST/EDT
+  - `/setup_channel #leetcode 18 0` - 6:00 PM EST/EDT
 
 ## Difficulty Examples
 
-- `/setup_channel #leetcode 9 0 easy` - Easy problems at 9:00 AM
-- `/setup_channel #leetcode 14 30 medium` - Medium problems at 2:30 PM
-- `/setup_channel #leetcode 18 0 hard` - Hard problems at 6:00 PM
-- `/setup_channel #leetcode 9 0 random` - LeetCode's daily challenge at 9:00 AM
+- `/setup_channel #leetcode 9 0 easy` - Easy problems at 9:00 AM EST/EDT
+- `/setup_channel #leetcode 14 30 medium` - Medium problems at 2:30 PM EST/EDT
+- `/setup_channel #leetcode 18 0 hard` - Hard problems at 6:00 PM EST/EDT
+- `/setup_channel #leetcode 9 0 random` - LeetCode's daily challenge at 9:00 AM EST/EDT
 
 ## Community Features
 
